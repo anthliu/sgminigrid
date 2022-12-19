@@ -85,8 +85,7 @@ class Button(SGWorldObj):
         self.is_pressed = is_pressed
 
     def can_overlap(self):
-        """The agent can only walk over this cell when the door is open"""
-        return self.is_pressed
+        return True
 
     def see_behind(self):
         return True
@@ -110,15 +109,9 @@ class Button(SGWorldObj):
     def render(self, img):
         c = COLORS[self.color]
 
-        if self.is_pressed:
-            fill_coords(img, point_in_rect(0.88, 1.00, 0.00, 1.00), c)
-            fill_coords(img, point_in_rect(0.92, 0.96, 0.04, 0.96), (0, 0, 0))
-            return
-        else:
-            fill_coords(img, point_in_rect(0.00, 1.00, 0.00, 1.00), c)
-            fill_coords(img, point_in_rect(0.04, 0.96, 0.04, 0.96), (0, 0, 0))
-            fill_coords(img, point_in_rect(0.08, 0.92, 0.08, 0.92), c)
-            fill_coords(img, point_in_rect(0.12, 0.88, 0.12, 0.88), (0, 0, 0))
+        fill_coords(img, point_in_rect(0.00, 1.00, 0.00, 1.00), c)
+        fill_coords(img, point_in_rect(0.04, 0.96, 0.04, 0.96), (0, 0, 0))
+        fill_coords(img, point_in_circle(0.5, 0.5, 0.4), c)
 
-            # Draw door handle
-            fill_coords(img, point_in_circle(cx=0.75, cy=0.50, r=0.08), c)
+        if self.is_pressed:
+            fill_coords(img, point_in_circle(0.5, 0.5, 0.35), (0, 0, 0))
