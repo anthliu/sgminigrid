@@ -4,7 +4,7 @@ from minigrid.core.grid import Grid
 from minigrid.core.mission import MissionSpace
 from minigrid.core.world_object import Door, Goal, Key
 from sgminigrid.sgminigrid_env import SGMiniGridEnv
-from sgminigrid.buttonobj import Button
+from sgminigrid.sgworld_object import Button
 
 
 class ButtonEnv(SGMiniGridEnv):

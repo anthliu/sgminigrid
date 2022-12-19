@@ -24,7 +24,62 @@ if TYPE_CHECKING:
 
 Point = Tuple[int, int]
 
-class Button(WorldObj):
+# Map of object type to integers
+NEW_OBJECT_TO_IDX = {
+    "unseen": 0,
+    "empty": 1,
+    "wall": 2,
+    "floor": 3,
+    "door": 4,
+    "key": 5,
+    "ball": 6,
+    "box": 7,
+    "goal": 8,
+    "lava": 9,
+    "agent": 10,
+    "button": 11,
+    "buttondoor": 12,
+}
+NEW_IDX_TO_OBJECT = dict(zip(NEW_OBJECT_TO_IDX.values(), NEW_OBJECT_TO_IDX.keys()))
+
+class SGWorldObj(WorldObj):
+    def __init__(self, type: str, color: str):
+        assert type in NEW_OBJECT_TO_IDX, type
+        assert color in COLOR_TO_IDX, color
+        self.type = type
+        self.color = color
+        self.contains = None
+
+        # Initial position of the object
+        self.init_pos: Point | None = None
+
+        # Current position of the object
+        self.cur_pos: Point | None = None
+
+    def encode(self) -> tuple[int, int, int]:
+        """Encode the a description of this object as a 3-tuple of integers"""
+        return (NEW_OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], 0)
+
+    @staticmethod
+    def decode(type_idx: int, color_idx: int, state: int) -> WorldObj | None:
+        """Create an object from a 3-tuple state description"""
+
+        if type_idx in IDX_TO_OBJECT:
+            return super().decode(type_idx, color_idx, state)
+
+        obj_type = NEW_IDX_TO_OBJECT[type_idx]
+        color = IDX_TO_COLOR[color_idx]
+
+        if obj_type == 'button':
+            v = Button(color, state == 1)
+        elif obj_type == 'buttondoor':
+            raise NotImplementedError
+        else:
+            assert False, "unknown object type in decode '%s'" % obj_type
+
+        return v
+
+class Button(SGWorldObj):
     def __init__(self, color: str, is_pressed: bool = False):
         super().__init__("button", color)
         self.is_pressed = is_pressed
