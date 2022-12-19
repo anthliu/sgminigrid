@@ -103,8 +103,7 @@ class Button(SGWorldObj):
         else:
             state = 1
 
-        #return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], state)
-        return (11, COLOR_TO_IDX[self.color], state)
+        return (NEW_OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], state)
 
     def render(self, img):
         c = COLORS[self.color]
@@ -115,3 +114,52 @@ class Button(SGWorldObj):
 
         if self.is_pressed:
             fill_coords(img, point_in_circle(0.5, 0.5, 0.35), (0, 0, 0))
+
+class ButtonDoor(SGWorldObj):
+    def __init__(self, button: SGWorldObj, color: str, is_open: bool = False):
+        super().__init__("buttondoor", color)
+        self.button = button
+        self.is_open = is_open
+
+    def can_overlap(self):
+        return self.is_open
+
+    def see_behind(self):
+        return self.is_open
+
+    def toggle(self, env, pos):
+        if self.button.is_pressed:
+            self.is_open = not self.is_open
+            return True
+        else:
+            return False
+
+    def encode(self):
+        """Encode the a description of this object as a 3-tuple of integers"""
+
+        # State, 0: open, 1: closed, 2: locked
+        if self.is_open:
+            state = 0
+        else:
+            state = 1
+
+        return (NEW_OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], state)
+
+    def render(self, img):
+        c = COLORS[self.color]
+        button_c = COLORS[self.button.color]
+
+        if self.is_open:
+            fill_coords(img, point_in_rect(0.88, 1.00, 0.00, 1.00), c)
+            fill_coords(img, point_in_rect(0.92, 0.96, 0.04, 0.96), (0, 0, 0))
+        else:
+            fill_coords(img, point_in_rect(0.00, 1.00, 0.00, 1.00), c)
+            fill_coords(img, point_in_rect(0.04, 0.96, 0.04, 0.96), (0, 0, 0))
+            fill_coords(img, point_in_rect(0.08, 0.92, 0.08, 0.92), c)
+            fill_coords(img, point_in_rect(0.12, 0.88, 0.12, 0.88), (0, 0, 0))
+
+            fill_coords(img, point_in_circle(cx=0.50, cy=0.50, r=0.30), 0.6 * np.array(button_c))
+
+            # Draw door handle
+            fill_coords(img, point_in_circle(cx=0.75, cy=0.50, r=0.08), c)
+

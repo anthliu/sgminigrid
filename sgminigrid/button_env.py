@@ -4,7 +4,7 @@ from minigrid.core.grid import Grid
 from minigrid.core.mission import MissionSpace
 from minigrid.core.world_object import Door, Goal, Key
 from sgminigrid.sgminigrid_env import SGMiniGridEnv
-from sgminigrid.sgworld_object import Button
+from sgminigrid.sgworld_object import Button, ButtonDoor
 
 
 class ButtonEnv(SGMiniGridEnv):
@@ -84,6 +84,9 @@ class ButtonEnv(SGMiniGridEnv):
         self.place_obj(obj=Key("yellow"), top=(0, 0), size=(splitIdx, height))
 
         # Place a yellow key on the left side
-        self.place_obj(obj=Button("yellow"), top=(1, 1), size=(splitIdx, height))
+        button = Button("yellow")
+        self.place_obj(obj=button, top=(1, 1), size=(splitIdx, height))
+
+        self.place_obj(obj=ButtonDoor(button, "red", False), top=(2, 2), size=(splitIdx, height))
 
         self.mission = "use the key to open the door and then get to the goal"
