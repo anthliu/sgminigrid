@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--env", help="gym environment to load", default="SGMG-Button-v0"
+        "--env", help="gym environment to load", default="SGMG-ButtonDoor-v0"
     )
     parser.add_argument(
         "--seed",

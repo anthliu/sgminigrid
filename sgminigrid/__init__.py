@@ -7,6 +7,11 @@ from minigrid.core import roomgrid
 
 def register_sgminigrid_envs():
     register(
-        id="SGMG-Button-v0",
-        entry_point="sgminigrid.button_env:ButtonEnv"
+        id="SGMG-ButtonTest-v0",
+        entry_point="sgminigrid.envs.buttontest:ButtonEnv"
+    )
+    register(
+        id="SGMG-ButtonDoor-v0",
+        entry_point="sgminigrid.envs.buttondoor:ButtonDoorEnv",
+        kwargs={"size": 8, "num_extra_buttons": 1, "max_steps": 100}
     )
