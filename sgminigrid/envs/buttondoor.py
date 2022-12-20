@@ -21,6 +21,10 @@ class ButtonDoorEnv(SGMiniGridEnv):
         super().__init__(
             mission_space=mission_space, grid_size=size, max_steps=max_steps, **kwargs
         )
+        self.completion_space = MissionSpace(
+            mission_func=self._gen_mission,
+            ordered_placeholders=[COLOR_NAMES, ["button", "buttondoor"]]
+        )
 
     @staticmethod
     def _gen_mission(color: str, obj_type: str='button'):
