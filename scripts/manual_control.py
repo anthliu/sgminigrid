@@ -6,7 +6,7 @@ import gymnasium as gym
 
 from minigrid.minigrid_env import MiniGridEnv
 from minigrid.utils.window import Window
-from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper
+from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper, FullyObsWrapper
 
 
 class ManualControl:
@@ -32,8 +32,8 @@ class ManualControl:
         self.window.show(block=True)
 
     def step(self, action: MiniGridEnv.Actions):
-        _, reward, terminated, truncated, info = self.env.step(action)
-        print(f"step={self.env.step_count}, reward={reward:.2f} completion={info['completion']}")
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        print(f"step={self.env.step_count}, reward={reward:.2f} completion={obs['completion']}")
 
         if terminated:
             print("terminated!")
@@ -113,6 +113,9 @@ if __name__ == "__main__":
         print("Using agent view")
         env = RGBImgPartialObsWrapper(env, env.tile_size)
         env = ImgObsWrapper(env)
+    else:
+        print("Fully obs view")
+        env = FullyObsWrapper(env)
 
     manual_control = ManualControl(env, agent_view=args.agent_view, seed=args.seed)
     manual_control.start()
