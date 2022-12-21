@@ -1,6 +1,11 @@
 from minigrid.minigrid_env import MiniGridEnv
 
 class SGMiniGridEnv(MiniGridEnv):
+    def train(self):
+        pass
+    def eval(self):
+        pass
+
     def _subtask_completions(self):
         return {}
 
