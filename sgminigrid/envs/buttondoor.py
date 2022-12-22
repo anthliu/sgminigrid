@@ -10,20 +10,21 @@ from sgminigrid.sgworld_object import Button, ButtonDoor
 
 class ButtonDoorEnv(SGMiniGridEnv):
 
-    def __init__(self, size=8, num_extra_buttons=2, max_steps: int | None = None, **kwargs):
+    def __init__(self, size=8, num_colors=6, num_extra_buttons=2, max_steps: int | None = None, **kwargs):
         if max_steps is None:
             max_steps = 10 * size**2
         self.num_extra_buttons = num_extra_buttons
+        self.colors = COLOR_NAMES[:num_colors]
         mission_space = MissionSpace(
             mission_func=self._gen_mission,
-            ordered_placeholders=[COLOR_NAMES, ["button"]]
+            ordered_placeholders=[self.colors, ["button"]]
         )
         super().__init__(
             mission_space=mission_space, grid_size=size, max_steps=max_steps, **kwargs
         )
         self.completion_space = MissionSpace(
             mission_func=self._gen_mission,
-            ordered_placeholders=[COLOR_NAMES, ["button", "buttondoor"]]
+            ordered_placeholders=[self.colors, ["button", "buttondoor"]]
         )
 
     @staticmethod
@@ -34,7 +35,9 @@ class ButtonDoorEnv(SGMiniGridEnv):
             return f"open the {color} door"
 
     def _gen_grid(self, width, height):
-        allcolors = self._rand_subset(COLOR_NAMES, 2 + self.num_extra_buttons)
+        self.task_infos = {}# Info about current task for logging
+        self.task_infos['tags'] = []
+        allcolors = self._rand_subset(self.colors, 2 + self.num_extra_buttons)
         self.allbuttons = {}
 
         # Create an empty grid
@@ -54,8 +57,10 @@ class ButtonDoorEnv(SGMiniGridEnv):
         dbutton_color = allcolors.pop()
         if self.agent_pos[0] >= splitIdx:
             is_pressed = True
+            passed_door = True
         else:
             is_pressed = self._rand_bool()
+            passed_door = False
         button = Button(dbutton_color, is_pressed=is_pressed)
         self.place_obj(button, size=(splitIdx, height))
         self.allbuttons[dbutton_color] = button
@@ -71,6 +76,7 @@ class ButtonDoorEnv(SGMiniGridEnv):
 
         # Create goal button
         goal_button_color = allcolors.pop()
+        self.task_infos['tags'].append(goal_button_color)
         self.goal_button = Button(goal_button_color, is_pressed=False)
         self.allbuttons[goal_button_color] = self.goal_button
         self.place_obj(obj=self.goal_button, top=(splitIdx, 0), size=(width - splitIdx, height))
@@ -82,6 +88,18 @@ class ButtonDoorEnv(SGMiniGridEnv):
             extra_button = Button(c, is_pressed=self._rand_bool())
             self.place_obj(extra_button)
             self.allbuttons[c] = extra_button
+
+        if passed_door:
+            task_difficulty = 'open'
+        else:
+            if is_open:
+                task_difficulty = 'openlong'
+            else:
+                if is_pressed:
+                    task_difficulty = 'closed'
+                else:
+                    task_difficulty = 'closedlocked'
+        self.task_infos['tags'].append(task_difficulty)
         
         assert len(allcolors) == 0
 
