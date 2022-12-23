@@ -15,3 +15,8 @@ def register_sgminigrid_envs():
         entry_point="sgminigrid.envs.buttondoor:ButtonDoorEnv",
         kwargs={"size": 8, "num_extra_buttons": 1, "max_steps": 100}
     )
+    register(
+        id="SGMG-Empty-v0",
+        entry_point="sgminigrid.envs.empty:SGEmptyEnv",
+        kwargs={"size": 8, "max_steps": 100}
+    )
