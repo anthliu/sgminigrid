@@ -6,6 +6,7 @@ from minigrid.core.mission import MissionSpace
 from minigrid.core.world_object import Door, Goal, Key
 from sgminigrid.sgminigrid_env import SGMiniGridEnv
 from sgminigrid.sgworld_object import Button, ButtonDoor
+import numpy as np
 
 
 class SGEmptyEnv(SGMiniGridEnv):
@@ -46,6 +47,8 @@ class SGEmptyEnv(SGMiniGridEnv):
 
         # Generate the surrounding walls
         self.grid.wall_rect(0, 0, width, height)
+        #self.grid.vert_wall(2, 0)
+        #self.grid.horz_wall(0, 2)
 
         # Place a goal square in the bottom-right corner
         self.goal_pos = (width - 2, height - 2)
@@ -64,3 +67,10 @@ class SGEmptyEnv(SGMiniGridEnv):
         completion = {}
         completion[self._gen_mission()] = self.agent_pos == self.goal_pos
         return completion
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = super().step(action)
+        distance = np.sqrt((self.goal_pos[0] - self.agent_pos[0])**2\
+                + (self.goal_pos[1] - self.agent_pos[1])**2)
+        bonus = np.exp(-1 - distance)
+        return obs, reward+bonus, terminated, truncated, info

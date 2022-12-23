@@ -18,5 +18,5 @@ def register_sgminigrid_envs():
     register(
         id="SGMG-Empty-v0",
         entry_point="sgminigrid.envs.empty:SGEmptyEnv",
-        kwargs={"size": 8, "max_steps": 100}
+        kwargs={"size": 8, "max_steps": 50}
     )
