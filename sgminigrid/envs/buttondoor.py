@@ -7,7 +7,6 @@ from minigrid.core.world_object import Door, Goal, Key
 from sgminigrid.sgminigrid_env import SGMiniGridEnv
 from sgminigrid.sgworld_object import Button, ButtonDoor
 
-
 class ButtonDoorEnv(SGMiniGridEnv):
 
     def __init__(self, size=8, num_colors=6, num_extra_buttons=2, max_steps: int | None = None, **kwargs):
@@ -19,12 +18,13 @@ class ButtonDoorEnv(SGMiniGridEnv):
             mission_func=self._gen_mission,
             ordered_placeholders=[self.colors, ["button"]]
         )
-        super().__init__(
-            mission_space=mission_space, grid_size=size, max_steps=max_steps, **kwargs
-        )
-        self.completion_space = MissionSpace(
+        completion_space = MissionSpace(
             mission_func=self._gen_mission,
             ordered_placeholders=[self.colors, ["button", "buttondoor"]]
+        )
+        super().__init__(
+            mission_space=mission_space, completion_space=completion_space,
+            grid_size=size, max_steps=max_steps, **kwargs
         )
 
     @staticmethod
