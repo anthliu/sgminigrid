@@ -13,7 +13,7 @@ def register_sgminigrid_envs():
     register(
         id="SGMG-ButtonDoor-v0",
         entry_point="sgminigrid.envs.buttondoor:ButtonDoorEnv",
-        kwargs={"size": 8, "num_extra_buttons": 1, "max_steps": 100}
+        kwargs={"size": 7, "num_extra_buttons": 3, "max_steps": 100}
     )
     register(
         id="SGMG-Empty-v0",

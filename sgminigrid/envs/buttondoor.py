@@ -37,8 +37,10 @@ class ButtonDoorEnv(SGMiniGridEnv):
     def _gen_grid(self, width, height):
         self.task_infos = {}# Info about current task for logging
         self.task_infos['tags'] = []
-        allcolors = self._rand_subset(self.colors, 2 + self.num_extra_buttons)
+        allcolors = self._rand_subset(self.colors, 1 + self.num_extra_buttons)
         self.allbuttons = {}
+        buttons_before_door = []
+        buttons_after_door = []
 
         # Create an empty grid
         self.grid = Grid(width, height)
@@ -47,62 +49,81 @@ class ButtonDoorEnv(SGMiniGridEnv):
         self.grid.wall_rect(0, 0, width, height)
 
         # Create a vertical splitting wall
-        splitIdx = self._rand_int(3, width - 3)
+        #splitIdx = self._rand_int(2, width - 2)
+        splitIdx = width // 2
         self.grid.vert_wall(splitIdx, 0)
 
-        # Place the agent at a random position and orientation
-        self.place_agent()
+        task_difficulty = self._rand_elem(['open', 'openlong', 'closed', 'closedlocked'])
+        self.task_infos['tags'].append(task_difficulty)
+
+        if task_difficulty == 'open':
+            agent_passed_door = self._rand_bool()
+            goal_passed_door = agent_passed_door
+            open_door = agent_passed_door
+            door_button_pressed = open_door or self._rand_bool()
+        elif task_difficulty == 'openlong':
+            agent_passed_door = False
+            goal_passed_door = True
+            open_door = True
+            door_button_pressed = True
+        elif task_difficulty == 'closed':
+            agent_passed_door = False
+            goal_passed_door = True
+            open_door = False
+            door_button_pressed = True
+        elif task_difficulty == 'closedlocked':
+            agent_passed_door = False
+            goal_passed_door = True
+            open_door = False
+            door_button_pressed = False
+        else:
+            raise ValueError
 
         # Create a button with door
         dbutton_color = allcolors.pop()
-        if self.agent_pos[0] >= splitIdx:
-            is_pressed = True
-            passed_door = True
-        else:
-            is_pressed = self._rand_bool()
-            passed_door = False
-        button = Button(dbutton_color, is_pressed=is_pressed)
+        button = Button(dbutton_color, is_pressed=door_button_pressed)
         self.place_obj(button, size=(splitIdx, height))
+        buttons_before_door.append(button)
         self.allbuttons[dbutton_color] = button
 
-        # Create a door in the wall
-        if self.agent_pos[0] >= splitIdx:
-            is_open = True
-        else:
-            is_open = self._rand_bool()
-        doorIdx = self._rand_int(1, width - 2)
-        self.door = ButtonDoor(button, dbutton_color, is_open)
+        #doorIdx = self._rand_int(1, width - 2)
+        doorIdx = height // 2
+        self.door = ButtonDoor(button, dbutton_color, open_door)
         self.put_obj(self.door, splitIdx, doorIdx)
 
-        # Create goal button
-        goal_button_color = allcolors.pop()
-        self.task_infos['tags'].append(goal_button_color)
-        self.goal_button = Button(goal_button_color, is_pressed=False)
-        self.allbuttons[goal_button_color] = self.goal_button
-        self.place_obj(obj=self.goal_button, top=(splitIdx, 0), size=(width - splitIdx, height))
-        self.mission = self._gen_mission(goal_button_color)
-
-        # Create extra buttons
+        # Create rest of the buttons
+        top = (splitIdx, 1)
         for _ in range(self.num_extra_buttons):
             c = allcolors.pop()
             extra_button = Button(c, is_pressed=self._rand_bool())
-            self.place_obj(extra_button)
+            self.place_obj(extra_button, top=top)# place at least one button after the door
+            top = None
             self.allbuttons[c] = extra_button
-
-        if passed_door:
-            task_difficulty = 'open'
-        else:
-            if is_open:
-                task_difficulty = 'openlong'
+            if extra_button.cur_pos[0] >= splitIdx:
+                buttons_after_door.append(extra_button)
             else:
-                if is_pressed:
-                    task_difficulty = 'closed'
-                else:
-                    task_difficulty = 'closedlocked'
-        self.task_infos['tags'].append(task_difficulty)
-        
-        assert len(allcolors) == 0
+                buttons_before_door.append(extra_button)
 
+        assert len(allcolors) == 0
+        assert len(buttons_after_door) >= 1
+        assert len(buttons_before_door) >= 1
+
+        # Select goal button
+        if goal_passed_door:
+            self.goal_button = self._rand_elem(buttons_after_door)
+        else:
+            self.goal_button = self._rand_elem(buttons_before_door)
+        self.goal_button.is_pressed = False
+
+        self.task_infos['tags'].append(self.goal_button.color)
+        self.mission = self._gen_mission(self.goal_button.color)
+
+        # Place the agent
+        if agent_passed_door:
+            self.place_agent(top=(splitIdx, 1))
+        else:
+            self.place_agent(size=(splitIdx, height))
+        
     def _subtask_completions(self):
         completion = {}
         for c, button in self.allbuttons.items():
