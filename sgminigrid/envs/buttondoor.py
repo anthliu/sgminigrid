@@ -18,10 +18,13 @@ class ButtonDoorEnv(SGMiniGridEnv):
             mission_func=self._gen_mission,
             ordered_placeholders=[self.colors, ["button"]]
         )
+        '''
         completion_space = MissionSpace(
             mission_func=self._gen_mission,
             ordered_placeholders=[self.colors, ["button", "buttondoor"]]
         )
+        '''
+        completion_space = mission_space
         super().__init__(
             mission_space=mission_space, completion_space=completion_space,
             grid_size=size, max_steps=max_steps, **kwargs
@@ -128,7 +131,7 @@ class ButtonDoorEnv(SGMiniGridEnv):
         completion = {}
         for c, button in self.allbuttons.items():
             completion[self._gen_mission(c)] = button.is_pressed
-        completion[self._gen_mission(self.door.color, 'buttondoor')] = self.door.is_open
+        #completion[self._gen_mission(self.door.color, 'buttondoor')] = self.door.is_open
         return completion
 
     def step(self, action):
