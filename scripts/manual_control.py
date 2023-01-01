@@ -33,7 +33,7 @@ class ManualControl:
 
     def step(self, action: MiniGridEnv.Actions):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        print(f"step={self.env.step_count}, reward={reward:.2f} completion={obs['completion']}")
+        print(f"mission_id={obs['mission_id']} step={self.env.step_count}, reward={reward:.2f} completion={obs['completion']}")
 
         if terminated:
             print("terminated!")
@@ -52,7 +52,8 @@ class ManualControl:
         self.env.reset(seed=seed)
 
         if hasattr(self.env, "mission"):
-            print("Mission: %s" % self.env.mission)
+            #print("Mission: %s" % self.env.mission)
+            print(f"Mission: {self.env.mission}, ID: {self.env.mission_lookup.mission_to_id[self.env.mission]}")
             self.window.set_caption(self.env.mission)
 
         self.redraw()
