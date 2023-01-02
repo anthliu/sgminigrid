@@ -56,6 +56,9 @@ class SGMiniGridEnv(MiniGridEnv):
     def _subtask_completions(self):
         return {}
 
+    def _reward(self):
+        return 1.0
+
     def reset(self, *args, seed=None, options=None):
         self.task_infos = {}
         obs, info = super().reset(*args, seed=seed, options=options)
