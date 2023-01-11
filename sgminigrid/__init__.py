@@ -36,6 +36,11 @@ def register_sgminigrid_envs():
         kwargs={"size": 7, "num_colors": 4, "num_extra_buttons": 3, "max_steps": 100, "generalize": True}
     )
     register(
+        id="SGMG-ButtonDoorFullCGen-v0",
+        entry_point="sgminigrid.envs.buttondoorfull:ButtonDoorFullEnv",
+        kwargs={"size": 7, "num_colors": 4, "num_extra_buttons": 3, "max_steps": 100, "generalize": True, "gen_class": "color"}
+    )
+    register(
         id="SGMG-Empty-v0",
         entry_point="sgminigrid.envs.empty:SGEmptyEnv",
         kwargs={"size": 8, "max_steps": 50}

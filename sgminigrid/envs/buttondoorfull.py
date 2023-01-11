@@ -9,7 +9,7 @@ from sgminigrid.sgworld_object import Button, ButtonDoor
 
 class ButtonDoorFullEnv(SGMiniGridEnv):
 
-    def __init__(self, size=8, num_colors=6, num_extra_buttons=2, max_steps: int | None = None, generalize=True, full_task=True, **kwargs):
+    def __init__(self, size=8, num_colors=6, num_extra_buttons=2, max_steps: int | None = None, generalize=True, full_task=True, gen_class='zeroshot', **kwargs):
         if max_steps is None:
             max_steps = 10 * size**2
         self.num_extra_buttons = num_extra_buttons
@@ -21,6 +21,8 @@ class ButtonDoorFullEnv(SGMiniGridEnv):
         completion_space = mission_space
         self.generalize = generalize
         self.full_task = full_task
+        self.gen_class = gen_class
+        assert self.gen_class in ['zeroshot', 'color']
         super().__init__(
             mission_space=mission_space, completion_space=completion_space,
             grid_size=size, max_steps=max_steps, **kwargs
@@ -59,7 +61,7 @@ class ButtonDoorFullEnv(SGMiniGridEnv):
         splitIdx = width // 2
         self.grid.vert_wall(splitIdx, 0)
 
-        if self.full_task:
+        if self.full_task or self.gen_class == 'color':
             task_difficulty = self._rand_elem(['open', 'openlong', 'closed', 'closedlocked', 'dooropen', 'doorlocked'])
         else:
             task_difficulty = self._rand_elem(['open', 'openlong', 'closed', 'dooropen', 'doorlocked'])
@@ -99,7 +101,11 @@ class ButtonDoorFullEnv(SGMiniGridEnv):
         self.task_infos['tags'].append(task_difficulty)
 
         # Create a button with door
-        dbutton_color = allcolors.pop()
+        if not self.full_task and self.gen_class == 'color' and task_difficulty == 'closedlocked':
+            dbutton_color = self.colors[0]
+            allcolors.remove(dbutton_color)
+        else:
+            dbutton_color = allcolors.pop()
         button = Button(dbutton_color, is_pressed=door_button_pressed)
         self.place_obj(button, size=(splitIdx, height))
         buttons_before_door.append(button)

@@ -105,6 +105,12 @@ if __name__ == "__main__":
         help="draw the agent sees (partially observable view)",
         action="store_true",
     )
+    parser.add_argument(
+        "--eval",
+        default=False,
+        help="Eval env version",
+        action="store_true",
+    )
 
     args = parser.parse_args()
 
@@ -115,5 +121,9 @@ if __name__ == "__main__":
         env = RGBImgPartialObsWrapper(env, env.tile_size)
         env = ImgObsWrapper(env)
 
+    if args.eval:
+        env.eval()
+    else:
+        env.train()
     manual_control = ManualControl(env, agent_view=args.agent_view, seed=args.seed)
     manual_control.start()
