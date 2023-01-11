@@ -9,7 +9,7 @@ from sgminigrid.sgworld_object import Button, ButtonDoor
 
 class ButtonDoorFullEnv(SGMiniGridEnv):
 
-    def __init__(self, size=8, num_colors=6, num_extra_buttons=2, max_steps: int | None = None, **kwargs):
+    def __init__(self, size=8, num_colors=6, num_extra_buttons=2, max_steps: int | None = None, generalize=True, full_task=True, **kwargs):
         if max_steps is None:
             max_steps = 10 * size**2
         self.num_extra_buttons = num_extra_buttons
@@ -19,10 +19,19 @@ class ButtonDoorFullEnv(SGMiniGridEnv):
             ordered_placeholders=[self.colors, ["button", "buttondoor"]]
         )
         completion_space = mission_space
+        self.generalize = generalize
+        self.full_task = full_task
         super().__init__(
             mission_space=mission_space, completion_space=completion_space,
             grid_size=size, max_steps=max_steps, **kwargs
         )
+
+    def train(self):
+        if self.generalize:
+            self.full_task = False
+    def eval(self):
+        if self.generalize:
+            self.full_task = True
 
     @staticmethod
     def _gen_mission(color: str, obj_type: str='button'):
@@ -50,7 +59,10 @@ class ButtonDoorFullEnv(SGMiniGridEnv):
         splitIdx = width // 2
         self.grid.vert_wall(splitIdx, 0)
 
-        task_difficulty = self._rand_elem(['open', 'openlong', 'closed', 'closedlocked', 'dooropen', 'doorlocked'])
+        if self.full_task:
+            task_difficulty = self._rand_elem(['open', 'openlong', 'closed', 'closedlocked', 'dooropen', 'doorlocked'])
+        else:
+            task_difficulty = self._rand_elem(['open', 'openlong', 'closed', 'dooropen', 'doorlocked'])
         is_door_task = task_difficulty.startswith('door')
         if task_difficulty == 'open':
             agent_passed_door = self._rand_bool()
