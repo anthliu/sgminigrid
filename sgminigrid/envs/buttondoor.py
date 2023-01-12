@@ -9,7 +9,7 @@ from sgminigrid.sgworld_object import Button, ButtonDoor
 
 class ButtonDoorEnv(SGMiniGridEnv):
 
-    def __init__(self, size=8, num_colors=6, num_extra_buttons=2, max_steps: int | None = None, generalize=True, full_task=True, **kwargs):
+    def __init__(self, size=8, num_colors=6, num_extra_buttons=2, max_steps: int | None = None, generalize=True, full_task=True, gen_class='zeroshot', **kwargs):
         if max_steps is None:
             max_steps = 10 * size**2
         self.num_extra_buttons = num_extra_buttons
@@ -20,6 +20,8 @@ class ButtonDoorEnv(SGMiniGridEnv):
         )
         self.generalize = generalize
         self.full_task = full_task
+        self.gen_class = gen_class
+        assert self.gen_class in ['zeroshot', 'color']
         '''
         completion_space = MissionSpace(
             mission_func=self._gen_mission,
@@ -65,7 +67,7 @@ class ButtonDoorEnv(SGMiniGridEnv):
         splitIdx = width // 2
         self.grid.vert_wall(splitIdx, 0)
 
-        if self.full_task:
+        if self.full_task or self.gen_class == 'color':
             task_difficulty = self._rand_elem(['open', 'openlong', 'closed', 'closedlocked'])
         else:
             task_difficulty = self._rand_elem(['open', 'openlong', 'closed'])
@@ -96,7 +98,11 @@ class ButtonDoorEnv(SGMiniGridEnv):
             raise ValueError
 
         # Create a button with door
-        dbutton_color = allcolors.pop()
+        if not self.full_task and self.gen_class == 'color' and task_difficulty == 'closedlocked':
+            dbutton_color = self.colors[0]
+            allcolors.remove(dbutton_color)
+        else:
+            dbutton_color = allcolors.pop()
         button = Button(dbutton_color, is_pressed=door_button_pressed)
         self.place_obj(button, size=(splitIdx, height))
         buttons_before_door.append(button)
