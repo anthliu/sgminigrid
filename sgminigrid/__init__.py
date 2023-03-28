@@ -65,3 +65,8 @@ def register_sgminigrid_envs():
         entry_point="sgminigrid.envs.empty:SGEmptyEnv",
         kwargs={"size": 8, "max_steps": 50}
     )
+    register(
+        id="SGMG-Tunnel-v0",
+        entry_point="sgminigrid.envs.tunnel:SGTunnel",
+        kwargs={"size": 10, "max_steps": 50}
+    )
