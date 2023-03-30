@@ -42,6 +42,9 @@ class SGTunnel(SGMiniGridEnv):
         return f"press the {color} button"
 
     def _gen_grid(self, width, height):
+        self.task_infos = {}# Info about current task for logging
+        self.task_infos['tags'] = []
+
         # Create an empty grid
         self.grid = Grid(width, height)
 
@@ -62,6 +65,7 @@ class SGTunnel(SGMiniGridEnv):
         self.agent_dir = 0
         
         goal = ['red', 'blue'][self._rand_int(0, 2)]
+        self.task_infos['tags'].append(goal)
         self.mission = self._gen_mission(goal)
 
         if goal == 'red':
