@@ -26,10 +26,13 @@ class SGTunnel(SGMiniGridEnv):
             mission_func=self._gen_mission,
             ordered_placeholders=place_holders
         )
+        '''
         completion_space = MissionSpace(
             mission_func=self._gen_mission,
-            ordered_placeholders=[['red', 'blue']]
+            ordered_placeholders=[['red', 'blue', 'both']]
         )
+        '''
+        completion_space = mission_space
 
 
         if max_steps is None:
@@ -92,8 +95,11 @@ class SGTunnel(SGMiniGridEnv):
 
     def _subtask_completions(self):
         completion = {}
-        completion[self._gen_mission('red')] = self.red.is_pressed
-        completion[self._gen_mission('blue')] = self.blue1.is_pressed or self.blue2.is_pressed
+        if self.compose:
+            completion[self._gen_mission('both')] = self.red.is_pressed and (self.blue1.is_pressed or self.blue2.is_pressed)
+        else:
+            completion[self._gen_mission('red')] = self.red.is_pressed
+            completion[self._gen_mission('blue')] = self.blue1.is_pressed or self.blue2.is_pressed
         return completion
 
     def step(self, action):
