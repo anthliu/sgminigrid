@@ -14,13 +14,22 @@ class SGTunnel(SGMiniGridEnv):
         self,
         size=10,
         max_steps: int | None = None,
+        compose=False,
         **kwargs,
     ):
+        self.compose = compose
+        if compose:
+            place_holders = [['both']]
+        else:
+            place_holders = [['red', 'blue']]
         mission_space = MissionSpace(
+            mission_func=self._gen_mission,
+            ordered_placeholders=place_holders
+        )
+        completion_space = MissionSpace(
             mission_func=self._gen_mission,
             ordered_placeholders=[['red', 'blue']]
         )
-        completion_space = mission_space
 
 
         if max_steps is None:
@@ -39,7 +48,10 @@ class SGTunnel(SGMiniGridEnv):
 
     @staticmethod
     def _gen_mission(color: str):
-        return f"press the {color} button"
+        if color == 'both':
+            return f"press both buttons"
+        else:
+            return f"press the {color} button"
 
     def _gen_grid(self, width, height):
         self.task_infos = {}# Info about current task for logging
@@ -64,14 +76,19 @@ class SGTunnel(SGMiniGridEnv):
         self.agent_pos = (width-4, 1)
         self.agent_dir = 0
         
-        goal = ['red', 'blue'][self._rand_int(0, 2)]
+        if self.compose:
+            goal = 'both'
+        else:
+            goal = ['red', 'blue'][self._rand_int(0, 2)]
         self.task_infos['tags'].append(goal)
         self.mission = self._gen_mission(goal)
 
         if goal == 'red':
             self.goal_func = lambda: self.red.is_pressed
-        else:
+        elif goal == 'blue':
             self.goal_func = lambda: self.blue1.is_pressed or self.blue2.is_pressed
+        elif goal == 'both':
+            self.goal_func = lambda: self.red.is_pressed and (self.blue1.is_pressed or self.blue2.is_pressed)
 
     def _subtask_completions(self):
         completion = {}
