@@ -75,3 +75,13 @@ def register_sgminigrid_envs():
         entry_point="sgminigrid.envs.tunnel:SGTunnel",
         kwargs={"size": 10, "max_steps": 50, "compose": True}
     )
+    register(
+        id="SGMG-Loading-v0",
+        entry_point="sgminigrid.envs.loading:SGLoading",
+        kwargs={"size": 8, "max_steps": 50}
+    )
+    register(
+        id="SGMG-Loading-Compose-v0",
+        entry_point="sgminigrid.envs.loading:SGLoading",
+        kwargs={"size": 8, "max_steps": 50, "compose": True}
+    )
