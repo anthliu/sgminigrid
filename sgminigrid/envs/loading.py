@@ -75,7 +75,7 @@ class SGLoading(SGMiniGridEnv):
         self.put_obj(self.blue, 5, 1)
 
         # Place the agent
-        self.agent_pos = (width-2, 2)
+        self.agent_pos = (self._rand_int(3, width-2), 2)
         self.agent_dir = 2
 
         if self.compose:
