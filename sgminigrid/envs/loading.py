@@ -15,8 +15,10 @@ class SGLoading(SGMiniGridEnv):
         size=7,
         max_steps: int | None = None,
         compose=False,
+        curriculum=False,
         **kwargs,
     ):
+        self.curriculum = curriculum
         self.compose = compose
         if compose:
             place_holders = [['both']]
@@ -60,6 +62,24 @@ class SGLoading(SGMiniGridEnv):
         self.task_infos = {}# Info about current task for logging
         self.task_infos['tags'] = []
 
+        # Sample goal
+        pre_place_red = False
+        pre_place_blue = False
+        if self.compose:
+            goal = 'both'
+        else:
+            goal = ['red', 'blue'][self._rand_int(0, 2)]
+            if self.curriculum:
+                if self._rand_bool():
+                    if goal == 'blue':
+                        pre_place_red = True
+                        pre_place_blue = False
+                    else:
+                        pre_place_red = False
+                        pre_place_blue = True
+        self.task_infos['tags'].append(goal)
+        self.mission = self._gen_mission(goal)
+
         # Create an empty grid
         self.grid = Grid(width, height)
 
@@ -68,22 +88,22 @@ class SGLoading(SGMiniGridEnv):
         self.put_obj(Wall(), 1, 1)
         self.put_obj(Wall(), 2, 1)
 
+
         self.red = Ball('red')
-        self.put_obj(self.red, 4, 1)
+        if pre_place_red:
+            self.put_obj(self.red, self._rand_int(1, 3), 2)
+        else:
+            self.put_obj(self.red, 4, 1)
 
         self.blue = Ball('blue')
-        self.put_obj(self.blue, 5, 1)
+        if pre_place_blue:
+            self.put_obj(self.blue, self._rand_int(1, 3), 2)
+        else:
+            self.put_obj(self.blue, 5, 1)
 
         # Place the agent
         self.agent_pos = (self._rand_int(3, width-2), 2)
         self.agent_dir = 2
-
-        if self.compose:
-            goal = 'both'
-        else:
-            goal = ['red', 'blue'][self._rand_int(0, 2)]
-        self.task_infos['tags'].append(goal)
-        self.mission = self._gen_mission(goal)
 
         self.red_goal = lambda: (0 <= self.red.cur_pos[0] <= 2)
         self.blue_goal = lambda: (0 <= self.blue.cur_pos[0] <= 2)

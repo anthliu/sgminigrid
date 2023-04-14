@@ -81,6 +81,11 @@ def register_sgminigrid_envs():
         kwargs={"size": 8, "max_steps": 50}
     )
     register(
+        id="SGMG-Loading-Curriculum-v0",
+        entry_point="sgminigrid.envs.loading:SGLoading",
+        kwargs={"size": 8, "max_steps": 50, "curriculum": True}
+    )
+    register(
         id="SGMG-Loading-Compose-v0",
         entry_point="sgminigrid.envs.loading:SGLoading",
         kwargs={"size": 8, "max_steps": 50, "compose": True}
