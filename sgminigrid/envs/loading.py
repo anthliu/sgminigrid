@@ -1,4 +1,5 @@
 from __future__ import annotations
+import types
 
 from minigrid.core.constants import COLOR_NAMES
 from minigrid.core.grid import Grid
@@ -16,10 +17,12 @@ class SGLoading(SGMiniGridEnv):
         max_steps: int | None = None,
         compose=False,
         curriculum=False,
+        sticky=False,
         **kwargs,
     ):
         self.curriculum = curriculum
         self.compose = compose
+        self.sticky = sticky# make ball objects only pickupable if not in the goal area
         if compose:
             place_holders = [['both']]
         else:
@@ -100,6 +103,10 @@ class SGLoading(SGMiniGridEnv):
             self.put_obj(self.blue, self._rand_int(1, 3), 2)
         else:
             self.put_obj(self.blue, 5, 1)
+
+        if self.sticky:
+            self.red.can_pickup = types.MethodType(lambda self: self.cur_pos[0] > 2, self.red)
+            self.blue.can_pickup = types.MethodType(lambda self: self.cur_pos[0] > 2, self.blue)
 
         # Place the agent
         self.agent_pos = (self._rand_int(3, width-2), 2)
