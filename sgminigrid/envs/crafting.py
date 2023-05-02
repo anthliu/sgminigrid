@@ -1,6 +1,7 @@
 from __future__ import annotations
 import types
 
+from gymnasium import spaces
 from minigrid.core.constants import COLOR_NAMES
 from minigrid.core.grid import Grid
 from minigrid.core.mission import MissionSpace
@@ -11,6 +12,7 @@ import numpy as np
 
 LL_TASKS = ['wood', 'grass', 'iron', 'toolshed', 'workbench', 'factory']
 HL_TASKS = ['plank', 'stick', 'cloth', 'rope', 'bridge', 'bed', 'axe', 'shears']
+LL_TO_ID = {task: i for i, task in enumerate(LL_TASKS)}
 
 VERB_TASK = {
     'get': ['wood', 'grass', 'iron'],
@@ -22,6 +24,7 @@ for verb, tasks in VERB_TASK.items():
     for t in tasks:
         TASK_TO_VERB[t] = verb
 
+MAX_SUBGOAL = 4
 SUBGOALS = {ll: [] for ll in LL_TASKS}
 SUBGOALS['plank'] = ['wood', 'toolshed']
 SUBGOALS['stick'] = ['wood', 'workbench']
@@ -74,11 +77,20 @@ class Crafting(SGMiniGridEnv):
             completion_space=completion_space,
             width=size,
             height=size,
-            # Set this to True for maximum speed
             see_through_walls=True,
             max_steps=max_steps,
             **kwargs,
         )
+        # override observation space with sketch
+        sg_observation_space = spaces.Dict({
+            'image': self.observation_space['image'],
+            "direction": self.observation_space['direction'],
+            "mission": self.observation_space['mission'],
+            "mission_id": spaces.Discrete(self.mission_lookup.n_missions),
+            "sketch": spaces.MultiDiscrete([len(LL_TASKS) + 1 for _ in range(MAX_SUBGOAL)]),
+            "completion": spaces.MultiBinary(self.mission_lookup.n_missions)
+        })
+        self.observation_space = sg_observation_space
 
     @staticmethod
     def _gen_mission(target: str):
@@ -99,6 +111,9 @@ class Crafting(SGMiniGridEnv):
             self.goal = self._rand_elem(LL_TASKS)
         self.task_infos['tags'].append(self.goal)
         self.mission = self._gen_mission(self.goal)
+        self.sketch = np.zeros(MAX_SUBGOAL, dtype=np.int_)
+        for i, sg in enumerate(SUBGOALS[self.goal]):
+            self.sketch[i] = LL_TO_ID[sg] + 1
 
         # Create an empty grid
         self.grid = Grid(width, height)
@@ -136,14 +151,15 @@ class Crafting(SGMiniGridEnv):
 
     def _update_state(self):
         used_tool = {}
-        for tool in ['toolshed', 'workbench', 'factory']:
+        all_tools = ['toolshed', 'workbench', 'factory']
+        for tool in all_tools:
             used_tool[tool] = not self.prev_state[tool] and self.env_state[tool]
 
         if used_tool['toolshed']:
             if self.env_state['wood']:
                 self.env_state['plank'] = True
             if self.env_state['grass']:
-                self.env_state['plank'] = True
+                self.env_state['rope'] = True
             if self.env_state['stick'] and self.env_state['iron']:
                 self.env_state['axe'] = True
         if used_tool['workbench']:
@@ -152,12 +168,16 @@ class Crafting(SGMiniGridEnv):
             if self.env_state['plank'] and self.env_state['grass']:
                 self.env_state['bed'] = True
             if self.env_state['stick'] and self.env_state['iron']:
-                self.env_state['axe'] = True
+                self.env_state['shears'] = True
         if used_tool['factory']:
             if self.env_state['grass']:
                 self.env_state['cloth'] = True
             if self.env_state['iron'] and self.env_state['wood']:
                 self.env_state['bridge'] = True
+
+        # refresh tool usage
+        for tool in all_tools:
+            self.env_state[tool] = False
 
     def _subtask_completions(self):
         completion = {}
@@ -184,8 +204,15 @@ class Crafting(SGMiniGridEnv):
                 reward += 1.0
         return reward
 
+    def reset(self, *args, seed=None, options=None):
+        obs, info = super().reset(*args, seed=seed, options=options)
+        obs['sketch'] = self.sketch
+        return obs, info
+
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
+
+        obs['sketch'] = self.sketch
 
         self._update_state()
         reward = self._reward()
