@@ -53,12 +53,12 @@ class Crafting(SGMiniGridEnv):
     ):
         self.compose = compose
         if compose:
-            place_holders = [LL_TASKS + HL_TASKS]
+            self.place_holders = [LL_TASKS + HL_TASKS]
         else:
-            place_holders = [LL_TASKS]
+            self.place_holders = [LL_TASKS]
         mission_space = MissionSpace(
             mission_func=self._gen_mission,
-            ordered_placeholders=place_holders
+            ordered_placeholders=self.place_holders
         )
         completion_space = mission_space
 

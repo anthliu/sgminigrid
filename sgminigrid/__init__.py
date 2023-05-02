@@ -109,10 +109,10 @@ def register_sgminigrid_envs():
     register(
         id="SGMG-Crafting-v0",
         entry_point="sgminigrid.envs.crafting:Crafting",
-        kwargs={"size": 8, "max_steps": 100}
+        kwargs={"size": 8, "max_steps": 50}
     )
     register(
         id="SGMG-Crafting-Compose-v0",
         entry_point="sgminigrid.envs.crafting:Crafting",
-        kwargs={"size": 8, "max_steps": 100, "compose": True}
+        kwargs={"size": 8, "max_steps": 50, "compose": True}
     )
