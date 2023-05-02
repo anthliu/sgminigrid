@@ -39,6 +39,8 @@ NEW_OBJECT_TO_IDX = {
     "agent": 10,
     "button": 11,
     "buttondoor": 12,
+    "collectible": 13,
+    "interactable": 14,
 }
 NEW_IDX_TO_OBJECT = dict(zip(NEW_OBJECT_TO_IDX.values(), NEW_OBJECT_TO_IDX.keys()))
 
@@ -163,3 +165,68 @@ class ButtonDoor(SGWorldObj):
             # Draw door handle
             fill_coords(img, point_in_circle(cx=0.75, cy=0.50, r=0.08), c)
 
+class Collectible(SGWorldObj):
+    def __init__(self, name: str, color: str, env_state: dict, grid, obj_id=0):
+        super().__init__("collectible", color)
+        self.name = name
+        self.env_state = env_state
+        self.env_state[name] = False
+        self.obj_id = obj_id
+        self.grid = grid
+
+    def can_overlap(self):
+        return True
+
+    def see_behind(self):
+        return True
+
+    def toggle(self, env, pos):
+        self.grid.set(self.cur_pos[0], self.cur_pos[1], None)
+        self.cur_pos = np.array([-1, -1])
+        self.env_state[self.name] = True
+        return True
+
+    def encode(self):
+        """Encode the a description of this object as a 3-tuple of integers"""
+
+        return (NEW_OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], self.obj_id)
+
+    def render(self, img):
+        # temp rendering code
+        c = COLORS[self.color]
+
+        fill_coords(img, point_in_rect(0.00, 1.00, 0.00, 1.00), c)
+        fill_coords(img, point_in_rect(0.04, 0.96, 0.04, 0.96), (0, 0, 0))
+        fill_coords(img, point_in_circle(0.5, 0.5, 0.4), c)
+
+class Interactable(SGWorldObj):
+    def __init__(self, name: str, color: str, env_state: dict, obj_id=0):
+        super().__init__("interactable", color)
+        self.name = name
+        self.env_state = env_state
+        self.env_state[name] = False
+        self.obj_id = obj_id
+
+    def can_overlap(self):
+        return True
+
+    def see_behind(self):
+        return True
+
+    def toggle(self, env, pos):
+        self.env_state[self.name] = True
+        return True
+
+    def encode(self):
+        """Encode the a description of this object as a 3-tuple of integers"""
+
+        return (NEW_OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], self.obj_id)
+
+    def render(self, img):
+        # temp rendering code
+        c = COLORS[self.color]
+
+        fill_coords(img, point_in_rect(0.00, 1.00, 0.00, 1.00), c)
+        fill_coords(img, point_in_rect(0.04, 0.96, 0.04, 0.96), (0, 0, 0))
+        fill_coords(img, point_in_circle(0.5, 0.5, 0.4), c)
+        fill_coords(img, point_in_circle(0.5, 0.5, 0.35), (0, 0, 0))
