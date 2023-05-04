@@ -141,7 +141,7 @@ class Crafting(SGMiniGridEnv):
         self.place_obj(self.toolshed)
         self.workbench = Interactable('workbench', 'yellow', self.env_state, 4)
         self.place_obj(self.workbench)
-        self.factory = Interactable('factory', 'grey', self.env_state, 4)
+        self.factory = Interactable('factory', 'grey', self.env_state, 5)
         self.place_obj(self.factory)
 
         # Place the agent
