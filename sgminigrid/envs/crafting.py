@@ -76,7 +76,8 @@ class Crafting(SGMiniGridEnv):
 
         # constants for calculating distance bonus
         self.size = size
-        self.dist_bonus_scale = 1. / max_steps
+        discount_factor = 0.95
+        self.dist_bonus_scale = (1 - discount_factor) / 2
         self.pos_grid = np.mgrid[:size, :size].transpose(1, 2, 0)
         self.max_dist = 2 * self.size
 
@@ -166,6 +167,8 @@ class Crafting(SGMiniGridEnv):
         #self.agent_pos = (self._rand_int(3, width-2), 2)
         #self.agent_dir = 2
         self.place_agent()
+        if self.dist_bonus:
+            self.prev_pos = np.array(self.agent_pos)
 
     def _update_state(self):
         used_tool = {}
@@ -221,11 +224,20 @@ class Crafting(SGMiniGridEnv):
             grid = self.grid.encode()
             grid[pos[0], pos[1]] = 0
             target_mask = (grid == target_enc).all(axis=-1)
+
             dist = np.abs(self.pos_grid - pos).sum(axis=-1)
             dist[~target_mask] = self.max_dist
             min_dist = dist.min()
-            bonus = self.dist_bonus_scale * (0.1 ** (min_dist / self.max_dist) - 0.1)
+
+            prev_dist = np.abs(self.pos_grid - self.prev_pos).sum(axis=-1)
+            prev_dist[~target_mask] = self.max_dist
+            prev_min_dist = prev_dist.min()
+
+            bonus = self.dist_bonus_scale * max(0, prev_min_dist - min_dist)
             reward += bonus
+            self.cur_min_dist = min_dist
+
+            self.prev_pos = pos
         return reward
 
     def reset(self, *args, seed=None, options=None):
