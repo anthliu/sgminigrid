@@ -52,9 +52,11 @@ class Crafting(SGMiniGridEnv):
         size=10,
         max_steps: int | None = None,
         compose=False,
+        dist_bonus=False,
         **kwargs,
     ):
         self.compose = compose
+        self.dist_bonus = dist_bonus
         if compose:
             self.place_holders = [LL_TASKS + HL_TASKS]
         else:
@@ -71,6 +73,12 @@ class Crafting(SGMiniGridEnv):
 
         if max_steps is None:
             max_steps = 10 * size
+
+        # constants for calculating distance bonus
+        self.size = size
+        self.dist_bonus_scale = 1. / max_steps
+        self.pos_grid = np.mgrid[:size, :size].transpose(1, 2, 0)
+        self.max_dist = 2 * self.size
 
         super().__init__(
             mission_space=mission_space,
@@ -128,14 +136,14 @@ class Crafting(SGMiniGridEnv):
 
         # Generate objects and tools
         for _ in range(self.num_trees):
-            tree = Collectible('wood', 'red', self.env_state, self.grid, 0)
-            self.place_obj(tree)
+            self.tree = Collectible('wood', 'red', self.env_state, self.grid, 0)
+            self.place_obj(self.tree)
         for _ in range(self.num_grass):
-            grass = Collectible('grass', 'green', self.env_state, self.grid, 1)
-            self.place_obj(grass)
+            self.grass = Collectible('grass', 'green', self.env_state, self.grid, 1)
+            self.place_obj(self.grass)
         for _ in range(self.num_iron):
-            iron = Collectible('iron', 'blue', self.env_state, self.grid, 2)
-            self.place_obj(iron)
+            self.iron = Collectible('iron', 'blue', self.env_state, self.grid, 2)
+            self.place_obj(self.iron)
 
         self.toolshed = Interactable('toolshed', 'purple', self.env_state, 3)
         self.place_obj(self.toolshed)
@@ -144,6 +152,16 @@ class Crafting(SGMiniGridEnv):
         self.factory = Interactable('factory', 'grey', self.env_state, 5)
         self.place_obj(self.factory)
 
+        self.all_tools = ['toolshed', 'workbench', 'factory']
+        self.target_to_obj = {
+            'wood': self.tree,
+            'grass': self.grass,
+            'iron': self.iron,
+            'toolshed': self.toolshed,
+            'workbench': self.workbench,
+            'factory': self.factory,
+        }
+
         # Place the agent
         #self.agent_pos = (self._rand_int(3, width-2), 2)
         #self.agent_dir = 2
@@ -151,8 +169,7 @@ class Crafting(SGMiniGridEnv):
 
     def _update_state(self):
         used_tool = {}
-        all_tools = ['toolshed', 'workbench', 'factory']
-        for tool in all_tools:
+        for tool in self.all_tools:
             used_tool[tool] = not self.prev_state[tool] and self.env_state[tool]
 
         if used_tool['toolshed']:
@@ -175,10 +192,6 @@ class Crafting(SGMiniGridEnv):
             if self.env_state['iron'] and self.env_state['wood']:
                 self.env_state['bridge'] = True
 
-        # refresh tool usage
-        for tool in all_tools:
-            self.env_state[tool] = False
-
     def _subtask_completions(self):
         completion = {}
         if self.compose:
@@ -189,7 +202,7 @@ class Crafting(SGMiniGridEnv):
             completion[self._gen_mission(task)] = self.env_state[task]
         return completion
     
-    def _reward(self):
+    def _reward(self, obs):
         reward = 0
         subgoals = SUBGOAL_REWARDS[self.goal]
         obtained = {t for t in self.env_state if self.env_state[t] and not self.prev_state[t]}
@@ -202,6 +215,17 @@ class Crafting(SGMiniGridEnv):
                 reward += 1.0 - 0.9 * (self.step_count / self.max_steps)
             else:
                 reward += 1.0
+        if self.dist_bonus and not self.compose:
+            target_enc = np.array(self.target_to_obj[self.goal].encode())
+            pos = np.array(self.agent_pos)
+            grid = self.grid.encode()
+            grid[pos[0], pos[1]] = 0
+            target_mask = (grid == target_enc).all(axis=-1)
+            dist = np.abs(self.pos_grid - pos).sum(axis=-1)
+            dist[~target_mask] = self.max_dist
+            min_dist = dist.min()
+            bonus = self.dist_bonus_scale * (0.1 ** (min_dist / self.max_dist) - 0.1)
+            reward += bonus
         return reward
 
     def reset(self, *args, seed=None, options=None):
@@ -215,9 +239,13 @@ class Crafting(SGMiniGridEnv):
         obs['sketch'] = self.sketch
 
         self._update_state()
-        reward = self._reward()
+        reward = self._reward(obs)
+
         terminated = self.env_state[self.goal]
 
+        # refresh tool usage
+        for tool in self.all_tools:
+            self.env_state[tool] = False
         self.prev_state = dict(self.env_state)
 
         return obs, reward, terminated, truncated, info
