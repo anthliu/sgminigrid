@@ -109,15 +109,22 @@ class Crafting(SGMiniGridEnv):
         else:# high level targets
             return TASK_TO_VERB[target] + ' ' + target + ': ' + ', '.join(TASK_TO_VERB[sub] + ' ' + sub for sub in SUBGOALS[target])
 
+    def _sample_task(self, task_id=None):
+        # Sample goal
+        if self.compose:
+            pool = HL_TASKS
+        else:
+            pool = LL_TASKS
+
+        if task_id is None:
+            self.goal = self._rand_elem(pool)
+        else:
+            self.goal = pool[task_id % len(pool)]
+
     def _gen_grid(self, width, height):
         self.task_infos = {}# Info about current task for logging
         self.task_infos['tags'] = []
 
-        # Sample goal
-        if self.compose:
-            self.goal = self._rand_elem(HL_TASKS)
-        else:
-            self.goal = self._rand_elem(LL_TASKS)
         self.task_infos['tags'].append(self.goal)
         self.mission = self._gen_mission(self.goal)
         self.sketch = np.zeros(MAX_SUBGOAL, dtype=np.int_)
@@ -240,8 +247,8 @@ class Crafting(SGMiniGridEnv):
             self.prev_pos = pos
         return reward
 
-    def reset(self, *args, seed=None, options=None):
-        obs, info = super().reset(*args, seed=seed, options=options)
+    def reset(self, *args, task_id=None, seed=None, options=None):
+        obs, info = super().reset(*args, task_id=task_id, seed=seed, options=options)
         obs['sketch'] = self.sketch
         return obs, info
 

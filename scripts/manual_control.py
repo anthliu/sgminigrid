@@ -15,11 +15,13 @@ class ManualControl:
         env: MiniGridEnv,
         agent_view: bool = False,
         window: Window = None,
+        task_id=None,
         seed=None,
     ) -> None:
         self.env = env
         self.agent_view = agent_view
         self.seed = seed
+        self.task_id = task_id
 
         if window is None:
             window = Window("minigrid - " + str(env.__class__))
@@ -49,7 +51,7 @@ class ManualControl:
         self.window.show_img(frame)
 
     def reset(self, seed=None):
-        self.env.reset(seed=seed)
+        self.env.reset(task_id=self.task_id, seed=seed)
 
         if hasattr(self.env, "mission"):
             #print("Mission: %s" % self.env.mission)
@@ -91,6 +93,9 @@ if __name__ == "__main__":
         "--env", help="gym environment to load", default="SGMG-BDoor-v0"
     )
     parser.add_argument(
+        "--task-id", type=int, help="Task to load in the environment", default=None
+    )
+    parser.add_argument(
         "--seed",
         type=int,
         help="random seed to generate the environment with",
@@ -125,5 +130,5 @@ if __name__ == "__main__":
         env.eval()
     else:
         env.train()
-    manual_control = ManualControl(env, agent_view=args.agent_view, seed=args.seed)
+    manual_control = ManualControl(env, agent_view=args.agent_view, seed=args.seed, task_id=args.task_id)
     manual_control.start()

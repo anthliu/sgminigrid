@@ -59,8 +59,12 @@ class SGMiniGridEnv(MiniGridEnv):
     def _reward(self):
         return 1.0
 
-    def reset(self, *args, seed=None, options=None):
+    def _sample_task(self, task_id=None):
+        pass
+
+    def reset(self, *args, task_id=None, seed=None, options=None):
         self.task_infos = {}
+        self._sample_task(task_id)
         obs, info = super().reset(*args, seed=seed, options=options)
         obs['completion'] = self.mission_lookup.dict_to_vec(self._subtask_completions())
         obs['mission_id'] = self.mission_lookup.mission_to_id[obs['mission']]
