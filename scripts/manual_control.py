@@ -51,7 +51,7 @@ class ManualControl:
         self.window.show_img(frame)
 
     def reset(self, seed=None):
-        self.env.reset(task_id=self.task_id, seed=seed)
+        self.env.reset(seed=seed, options={'task_id': self.task_id})
 
         if hasattr(self.env, "mission"):
             #print("Mission: %s" % self.env.mission)

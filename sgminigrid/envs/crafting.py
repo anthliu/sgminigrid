@@ -247,8 +247,8 @@ class Crafting(SGMiniGridEnv):
             self.prev_pos = pos
         return reward
 
-    def reset(self, *args, task_id=None, seed=None, options=None):
-        obs, info = super().reset(*args, task_id=task_id, seed=seed, options=options)
+    def reset(self, *args, seed=None, options=None):
+        obs, info = super().reset(*args, seed=seed, options=options)
         obs['sketch'] = self.sketch
         return obs, info
 
