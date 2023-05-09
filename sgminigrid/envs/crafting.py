@@ -1,5 +1,6 @@
 from __future__ import annotations
 import types
+import math
 
 from gymnasium import spaces
 from minigrid.core.constants import COLOR_NAMES
@@ -53,10 +54,12 @@ class Crafting(SGMiniGridEnv):
         max_steps: int | None = None,
         compose=False,
         dist_bonus=False,
+        fixed_pos=False,
         **kwargs,
     ):
         self.compose = compose
         self.dist_bonus = dist_bonus
+        self.fixed_pos = fixed_pos
         if compose:
             self.place_holders = [LL_TASKS + HL_TASKS]
         else:
@@ -143,22 +146,26 @@ class Crafting(SGMiniGridEnv):
         self.prev_state = dict(self.env_state)
 
         # Generate objects and tools
+        if self.fixed_pos:
+            rng = np.random.default_rng(42)
+        else:
+            rng = None
         for _ in range(self.num_trees):
             self.tree = Collectible('wood', 'red', self.env_state, self.grid, 0)
-            self.place_obj(self.tree)
+            self.rng_place_obj(self.tree, rng=rng)
         for _ in range(self.num_grass):
             self.grass = Collectible('grass', 'green', self.env_state, self.grid, 1)
-            self.place_obj(self.grass)
+            self.rng_place_obj(self.grass, rng=rng)
         for _ in range(self.num_iron):
             self.iron = Collectible('iron', 'blue', self.env_state, self.grid, 2)
-            self.place_obj(self.iron)
+            self.rng_place_obj(self.iron, rng=rng)
 
         self.toolshed = Interactable('toolshed', 'purple', self.env_state, 3)
-        self.place_obj(self.toolshed)
+        self.rng_place_obj(self.toolshed, rng=rng)
         self.workbench = Interactable('workbench', 'yellow', self.env_state, 4)
-        self.place_obj(self.workbench)
+        self.rng_place_obj(self.workbench, rng=rng)
         self.factory = Interactable('factory', 'grey', self.env_state, 5)
-        self.place_obj(self.factory)
+        self.rng_place_obj(self.factory, rng=rng)
 
         self.all_tools = ['toolshed', 'workbench', 'factory']
         self.target_to_obj = {
@@ -176,6 +183,66 @@ class Crafting(SGMiniGridEnv):
         self.place_agent()
         if self.dist_bonus:
             self.prev_pos = np.array(self.agent_pos)
+
+    def rng_place_obj(
+        self,
+        obj: WorldObj | None,
+        top: Point = None,
+        size: tuple[int, int] = None,
+        reject_fn=None,
+        max_tries=math.inf,
+        rng=None,
+    ):
+        """
+        Modifies minigrid place_obj with rng arg (for fixed placements)
+        """
+        if rng is None:
+            rng = self.np_random
+
+        if top is None:
+            top = (0, 0)
+        else:
+            top = (max(top[0], 0), max(top[1], 0))
+
+        if size is None:
+            size = (self.grid.width, self.grid.height)
+
+        num_tries = 0
+
+        while True:
+            # This is to handle with rare cases where rejection sampling
+            # gets stuck in an infinite loop
+            if num_tries > max_tries:
+                raise RecursionError("rejection sampling failed in place_obj")
+
+            num_tries += 1
+
+            pos = (
+                rng.integers(top[0], min(top[0] + size[0], self.grid.width)),
+                rng.integers(top[1], min(top[1] + size[1], self.grid.height)),
+            )
+
+            # Don't place the object on top of another object
+            if self.grid.get(*pos) is not None:
+                continue
+
+            # Don't place the object where the agent is
+            if np.array_equal(pos, self.agent_pos):
+                continue
+
+            # Check if there is a filtering criterion
+            if reject_fn and reject_fn(self, pos):
+                continue
+
+            break
+
+        self.grid.set(pos[0], pos[1], obj)
+
+        if obj is not None:
+            obj.init_pos = pos
+            obj.cur_pos = pos
+
+        return pos
 
     def _update_state(self):
         used_tool = {}
