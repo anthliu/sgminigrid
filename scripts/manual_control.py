@@ -7,6 +7,7 @@ import gymnasium as gym
 from minigrid.minigrid_env import MiniGridEnv
 from minigrid.utils.window import Window
 from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper
+from sgminigrid.wrappers import CompactCraftObsWrapper
 
 
 class ManualControl:
@@ -35,6 +36,7 @@ class ManualControl:
 
     def step(self, action: MiniGridEnv.Actions):
         obs, reward, terminated, truncated, info = self.env.step(action)
+        print(obs)
         print(f"mission_id={obs['mission_id']} step={self.env.step_count}, reward={reward:.2f} completion={obs['completion']}")
 
         if terminated:
@@ -120,6 +122,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     env: MiniGridEnv = gym.make(args.env, tile_size=args.tile_size)
+    env = CompactCraftObsWrapper(env)
 
     if args.agent_view:
         print("Using agent view")

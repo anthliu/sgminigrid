@@ -1,7 +1,8 @@
 import numpy as np
 from gymnasium.core import ObservationWrapper, ObsType, Wrapper
 from gymnasium import spaces
-from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX, STATE_TO_IDX
+from minigrid.core.constants import COLOR_TO_IDX, STATE_TO_IDX
+from sgminigrid.sgworld_object import NEW_OBJECT_TO_IDX
 
 class CompactCraftObsWrapper(ObservationWrapper):
     def __init__(self, env):
@@ -22,7 +23,7 @@ class CompactCraftObsWrapper(ObservationWrapper):
         env = self.unwrapped
         full_grid = env.grid.encode()
         full_grid[env.agent_pos[0]][env.agent_pos[1]] = np.array(
-            [OBJECT_TO_IDX["agent"], COLOR_TO_IDX["red"], env.agent_dir]
+            [NEW_OBJECT_TO_IDX["agent"], COLOR_TO_IDX["red"], env.agent_dir]
         )
 
         return {**obs, "image": self._compress(full_grid)}
