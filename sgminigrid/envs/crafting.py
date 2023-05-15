@@ -61,14 +61,17 @@ class Crafting(SGMiniGridEnv):
         self.dist_bonus = dist_bonus
         self.fixed_pos = fixed_pos
         if compose:
-            self.place_holders = [LL_TASKS + HL_TASKS]
+            self.place_holders = [HL_TASKS]
         else:
             self.place_holders = [LL_TASKS]
         mission_space = MissionSpace(
             mission_func=self._gen_mission,
             ordered_placeholders=self.place_holders
         )
-        completion_space = mission_space
+        completion_space = MissionSpace(
+            mission_func=self._gen_mission,
+            ordered_placeholders=[LL_TASKS + HL_TASKS]
+        )
 
         self.num_trees = 3
         self.num_grass = 5

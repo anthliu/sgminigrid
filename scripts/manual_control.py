@@ -36,7 +36,6 @@ class ManualControl:
 
     def step(self, action: MiniGridEnv.Actions):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        print(obs)
         print(f"mission_id={obs['mission_id']} step={self.env.step_count}, reward={reward:.2f} completion={obs['completion']}")
 
         if terminated:
