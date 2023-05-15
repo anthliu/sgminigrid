@@ -3,11 +3,11 @@
 import time
 import numpy as np
 import gymnasium as gym
-from sgminigrid.crafting_oracle import SOCraftingOracleAgent
+from sgminigrid.crafting_oracle import SOCraftingOracleAgent, CraftingOracleAgent, HLCraftingOracleAgent, SOHLCraftingOracleAgent
 from sgminigrid.wrappers import CompactCraftObsWrapper
 
-def shuffle(episodes, env):
-    actor = SOCraftingOracleAgent(None, env, np.random.default_rng(42)).get_test_actor()
+def shuffle(episodes, agent, env):
+    actor = agent.get_test_actor()
     rs = []
     Ts = []
     for ep in range(episodes):
@@ -19,8 +19,8 @@ def shuffle(episodes, env):
             T += 1
             # time.sleep(1/10.)
             # action = env.action_space.sample()
-            a = actor.act(sub_mission_id=obs['mission_id'], mission_id=5)
-            # a = actor.act()
+            # a = actor.act(sub_mission_id=obs['mission_id'], mission_id=5)
+            a = actor.act()
             obs, reward, done, truncated, infos = env.step(a)
             r += reward
             terminal = done or truncated
@@ -49,10 +49,24 @@ if __name__ == "__main__":
     parser.add_argument(
         "--render", action='store_true', help="render to screen"
     )
+    parser.add_argument(
+        "--second-order", action='store_true', help="use second order"
+    )
     args = parser.parse_args()
     if args.render:
         env = CompactCraftObsWrapper(gym.make(args.env, render_mode='human'))
     else:
         env = CompactCraftObsWrapper(gym.make(args.env))
 
-    shuffle(args.episodes, env)
+    if 'Compose' in args.env:
+        if args.second_order:
+            agent = SOHLCraftingOracleAgent(None, env, np.random.default_rng(42))
+        else:
+            agent = HLCraftingOracleAgent(None, env, np.random.default_rng(42))
+    else:
+        if args.second_order:
+            agent = SOCraftingOracleAgent(None, env, np.random.default_rng(42))
+        else:
+            agent = CraftingOracleAgent(None, env, np.random.default_rng(42))
+
+    shuffle(args.episodes, agent, env)

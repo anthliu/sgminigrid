@@ -169,3 +169,60 @@ class CraftingOracleActor(object):
         if a is None:
             return MiniGridEnv.Actions.toggle
         return a
+
+class HLCraftingOracleAgent(CraftingOracleAgent):
+    TAGS = []
+    def __init__(self, args, env, rng):
+        self.args = args
+        self.rng = rng
+        # assert isinstance(env, CompactCraftObsWrapper)
+        self.observation_space = env.observation_space
+        assert self.observation_space['mission_id'].n == 8
+        self.action_space = env.action_space
+        self.actor = HLCraftingOracleActor(self.args, self.rng, self.observation_space, self.action_space, second_order=False)
+
+class SOHLCraftingOracleAgent(HLCraftingOracleAgent):
+    def __init__(self, args, rng, env):
+        super().__init__(args, rng, env)
+        self.actor = HLCraftingOracleActor(self.args, self.rng, self.observation_space, self.action_space, second_order=True)
+
+class HLCraftingOracleActor(object):
+    def __init__(self, args, rng, observation_space, action_space, second_order=False):
+        self.args = args
+        self.rng = rng
+        self.observation_space = observation_space
+        self.action_space = action_space
+
+        self.second_order = second_order
+        self.ll_actor = CraftingOracleActor(args, rng, observation_space, action_space, second_order)
+
+    def observe_first(self, obs, infos):
+        self.last_obs = obs
+        self.last_infos = infos
+        self.ll_actor.observe_first(obs, infos)
+
+        self.seen_completed = np.zeros(self.observation_space['completion'].shape, np.bool_)
+
+    def observe(self, next_obs, action, infos):
+        self.last_obs = next_obs
+        self.last_infos = infos
+        self.ll_actor.observe(next_obs, action, infos)
+
+    def act(self, accum=None, mission_id=None):
+        if mission_id is None:
+            mission_id = self.last_obs['mission_id']
+
+        sketch = self.last_obs['sketch']
+        self.seen_completed = self.seen_completed | self.last_obs['completion']
+        completion = self.seen_completed
+        sketch = [m - 1 for m in sketch if m > 0]# remove padding
+        plan = [m for m in sketch if not completion[m]]
+        if len(plan) == 0:
+            plan = [sketch[-1]]# for shears edge case (workbench twice)
+        if not self.second_order or len(plan) < 2:
+            hl_action = plan[0]
+            a = self.ll_actor.act(mission_id=hl_action)
+        else:
+            hl_action = plan[0:2]
+            a = self.ll_actor.act(mission_id=hl_action[1], sub_mission_id=hl_action[0])
+        return a
