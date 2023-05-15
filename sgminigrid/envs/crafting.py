@@ -101,9 +101,9 @@ class Crafting(SGMiniGridEnv):
             'image': self.observation_space['image'],
             "direction": self.observation_space['direction'],
             "mission": self.observation_space['mission'],
-            "mission_id": spaces.Discrete(self.mission_lookup.n_missions),
+            "mission_id": self.observation_space['mission_id'],
+            "completion": self.observation_space['completion'],
             "sketch": spaces.MultiDiscrete([len(LL_TASKS) + 1 for _ in range(MAX_SUBGOAL)]),
-            "completion": spaces.MultiBinary(self.mission_lookup.n_missions)
         })
         self.observation_space = sg_observation_space
 

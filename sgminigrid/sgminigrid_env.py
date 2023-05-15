@@ -38,13 +38,15 @@ class SGMiniGridEnv(MiniGridEnv):
             self.completion_space = mission_space
         else:
             self.completion_space = completion_space
-        self.mission_lookup = MissionLookup(self.completion_space)
+        self.mission_space = mission_space
+        self.completion_lookup = MissionLookup(self.completion_space)
+        self.mission_lookup = MissionLookup(self.mission_space)
         sg_observation_space = spaces.Dict({
             'image': self.observation_space['image'],
             "direction": self.observation_space['direction'],
             "mission": self.observation_space['mission'],
             "mission_id": spaces.Discrete(self.mission_lookup.n_missions),
-            "completion": spaces.MultiBinary(self.mission_lookup.n_missions)
+            "completion": spaces.MultiBinary(self.completion_lookup.n_missions)
         })
         self.observation_space = sg_observation_space
 
@@ -67,14 +69,14 @@ class SGMiniGridEnv(MiniGridEnv):
         options = {} if options is None else options
         self._sample_task(task_id=options.get('task_id', None))
         obs, info = super().reset(*args, seed=seed, options=options)
-        obs['completion'] = self.mission_lookup.dict_to_vec(self._subtask_completions())
+        obs['completion'] = self.completion_lookup.dict_to_vec(self._subtask_completions())
         obs['mission_id'] = self.mission_lookup.mission_to_id[obs['mission']]
         info.update(self.task_infos)
         return obs, info
 
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
-        obs['completion'] = self.mission_lookup.dict_to_vec(self._subtask_completions())
+        obs['completion'] = self.completion_lookup.dict_to_vec(self._subtask_completions())
         obs['mission_id'] = self.mission_lookup.mission_to_id[obs['mission']]
         info.update(self.task_infos)
         return obs, reward, terminated, truncated, info
