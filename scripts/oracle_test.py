@@ -7,7 +7,7 @@ from sgminigrid.crafting_oracle import SOCraftingOracleAgent
 from sgminigrid.wrappers import CompactCraftObsWrapper
 
 def shuffle(episodes, env):
-    actor = SOCraftingOracleAgent(None, np.random.default_rng(42), env).get_test_actor()
+    actor = SOCraftingOracleAgent(None, env, np.random.default_rng(42)).get_test_actor()
     rs = []
     Ts = []
     for ep in range(episodes):

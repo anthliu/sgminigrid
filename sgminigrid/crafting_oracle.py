@@ -1,3 +1,4 @@
+from copy import deepcopy
 import numpy as np
 
 from minigrid.minigrid_env import MiniGridEnv
@@ -37,12 +38,13 @@ def _goal_neighbors(x, y, border):
 
 class CraftingOracleAgent():
     TAGS = []
-    def __init__(self, args, rng, env):
+    def __init__(self, args, env, rng):
         self.args = args
         self.rng = rng
-        self.observation_space = env.observation_space
         assert isinstance(env, CompactCraftObsWrapper)
-        assert self.observation_space['mission_id'].n == 6
+        # assert self.observation_space['mission_id'].n == 6
+        self.observation_space = deepcopy(env.observation_space)
+        self.observation_space['mission_id'].n = 6# override environment to have 6 goals
         self.action_space = env.action_space
         self.actor = CraftingOracleActor(self.args, self.rng, self.observation_space, self.action_space, second_order=False)
 
