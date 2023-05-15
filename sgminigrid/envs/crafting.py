@@ -55,15 +55,24 @@ class Crafting(SGMiniGridEnv):
         compose=False,
         dist_bonus=False,
         fixed_pos=False,
+        outer_place=False,
         **kwargs,
     ):
         self.compose = compose
         self.dist_bonus = dist_bonus
         self.fixed_pos = fixed_pos
+        self.outer_place = outer_place
         if compose:
             self.place_holders = [HL_TASKS]
         else:
             self.place_holders = [LL_TASKS]
+        if outer_place:
+            def reject_fn(env, pos):
+                return not((pos[0] < 2) or (pos[1] < 2)\
+                    or (pos[0] > size-3) or (pos[1] > size-3))
+            self.reject_fn = reject_fn
+        else:
+            self.reject_fn = None
         mission_space = MissionSpace(
             mission_func=self._gen_mission,
             ordered_placeholders=self.place_holders
@@ -155,20 +164,20 @@ class Crafting(SGMiniGridEnv):
             rng = None
         for _ in range(self.num_trees):
             self.tree = Collectible('wood', 'red', self.env_state, self.grid, 0)
-            self.rng_place_obj(self.tree, rng=rng)
+            self.rng_place_obj(self.tree, rng=rng, reject_fn=self.reject_fn)
         for _ in range(self.num_grass):
             self.grass = Collectible('grass', 'green', self.env_state, self.grid, 1)
-            self.rng_place_obj(self.grass, rng=rng)
+            self.rng_place_obj(self.grass, rng=rng, reject_fn=self.reject_fn)
         for _ in range(self.num_iron):
             self.iron = Collectible('iron', 'blue', self.env_state, self.grid, 2)
-            self.rng_place_obj(self.iron, rng=rng)
+            self.rng_place_obj(self.iron, rng=rng, reject_fn=self.reject_fn)
 
         self.toolshed = Interactable('toolshed', 'purple', self.env_state, 3)
-        self.rng_place_obj(self.toolshed, rng=rng)
+        self.rng_place_obj(self.toolshed, rng=rng, reject_fn=self.reject_fn)
         self.workbench = Interactable('workbench', 'yellow', self.env_state, 4)
-        self.rng_place_obj(self.workbench, rng=rng)
+        self.rng_place_obj(self.workbench, rng=rng, reject_fn=self.reject_fn)
         self.factory = Interactable('factory', 'grey', self.env_state, 5)
-        self.rng_place_obj(self.factory, rng=rng)
+        self.rng_place_obj(self.factory, rng=rng, reject_fn=self.reject_fn)
 
         self.all_tools = ['toolshed', 'workbench', 'factory']
         self.target_to_obj = {
@@ -288,10 +297,12 @@ class Crafting(SGMiniGridEnv):
         obtained = {t for t in self.env_state if self.env_state[t] and not self.prev_state[t]}
         for sg in subgoals:
             if sg in obtained:
+                #reward += SUBGOAL_BASE_REWARD * (1.0 - 0.9 * min(1, self.step_count / (self.size * 3)))
                 reward += SUBGOAL_BASE_REWARD * (1.0 - 0.9 * (self.step_count / self.max_steps))
 
         if self.goal in obtained:
             if self.compose:
+                #reward += 1.0 - 0.9 * min(1, self.step_count / (self.size * 3))
                 reward += 1.0 - 0.9 * (self.step_count / self.max_steps)
             else:
                 reward += 1.0
