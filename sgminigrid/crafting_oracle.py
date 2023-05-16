@@ -149,7 +149,7 @@ class CraftingOracleActor(object):
         self.last_obs = next_obs
         self.last_infos = infos
 
-    def act(self, accum=None, mission_id=None, sub_mission_id=None):
+    def act(self, accum=None, mission_id=None, sub_mission_id=None, include_terminal=False):
         if mission_id is None:
             mission_id = self.last_obs['mission_id']
         if sub_mission_id is None:
@@ -167,8 +167,11 @@ class CraftingOracleActor(object):
                 max_dist = self.flow[sub_mission_id, mission_id, nx, ny, nd]
                 a = na
         if a is None:
-            return MiniGridEnv.Actions.toggle
-        return a
+            a = MiniGridEnv.Actions.toggle
+        if include_terminal:
+            return a, (a == MiniGridEnv.Actions.toggle)
+        else:
+            return a
 
 class HLCraftingOracleAgent(CraftingOracleAgent):
     TAGS = []
