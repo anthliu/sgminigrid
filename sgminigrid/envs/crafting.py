@@ -192,7 +192,10 @@ class Crafting(SGMiniGridEnv):
         # Place the agent
         #self.agent_pos = (self._rand_int(3, width-2), 2)
         #self.agent_dir = 2
-        self.place_agent()
+        if self.outer_place:
+            self.place_agent(top=(self.size//2, self.size//2), size=(1,1), rand_dir=True)
+        else:
+            self.place_agent()
         if self.dist_bonus:
             self.prev_pos = np.array(self.agent_pos)
 
@@ -297,13 +300,11 @@ class Crafting(SGMiniGridEnv):
         obtained = {t for t in self.env_state if self.env_state[t] and not self.prev_state[t]}
         for sg in subgoals:
             if sg in obtained:
-                #reward += SUBGOAL_BASE_REWARD * (1.0 - 0.9 * min(1, self.step_count / (self.size * 3)))
-                reward += SUBGOAL_BASE_REWARD * (1.0 - 0.9 * (self.step_count / self.max_steps))
+                reward += SUBGOAL_BASE_REWARD * np.exp(-self.step_count / 20)
 
         if self.goal in obtained:
             if self.compose:
-                #reward += 1.0 - 0.9 * min(1, self.step_count / (self.size * 3))
-                reward += 1.0 - 0.9 * (self.step_count / self.max_steps)
+                reward += np.exp(-(self.step_count - 10) / 10)# penalize agent for using more than the minimal steps (~10)
             else:
                 reward += 1.0
         if self.dist_bonus and not self.compose:
