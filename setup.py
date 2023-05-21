@@ -8,7 +8,7 @@ setup(
     license='MIT',
     packages=['sgminigrid'],
     install_requires=[
-        'minigrid'
+        'minigrid==2.1.1'
     ],
     python_requires='>=3.7',
     entry_points={
