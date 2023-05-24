@@ -192,8 +192,8 @@ class Crafting(SGMiniGridEnv):
         # Place the agent
         #self.agent_pos = (self._rand_int(3, width-2), 2)
         #self.agent_dir = 2
-        if self.outer_place:
-            self.place_agent(top=(self.size//2, self.size//2), size=(1,1), rand_dir=True)
+        if self.outer_place and self.compose:
+            self.place_agent(top=(self.size//2 - 1, self.size//2 - 1), size=(2,2), rand_dir=True)
         else:
             self.place_agent()
         if self.dist_bonus:
