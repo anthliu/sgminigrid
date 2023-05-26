@@ -1,5 +1,6 @@
 from copy import deepcopy
 import numpy as np
+import itertools as it
 
 from minigrid.minigrid_env import MiniGridEnv
 from sgminigrid.wrappers import CompactCraftObsWrapper
@@ -36,9 +37,19 @@ def _goal_neighbors(x, y, border):
         if not border[x-DIR_MAP[d][0], y-DIR_MAP[d][1]]
     ]
 
+def _fill_flow(reachable_q, flow, border):
+    while len(reachable_q) > 0:
+        state = reachable_q.pop(0)
+        dist = flow[state]
+        for nstate, _ in _get_r_neighbors(*state, border):
+            ndist = flow[nstate]
+            if dist + 1 < ndist:
+                flow[nstate] = dist + 1
+                reachable_q.append(nstate)
+
 class CraftingOracleAgent():
     TAGS = []
-    def __init__(self, args, env, rng):
+    def __init__(self, args, env, rng, nth_order=1):
         self.args = args
         self.rng = rng
         assert isinstance(env, CompactCraftObsWrapper)
@@ -46,7 +57,7 @@ class CraftingOracleAgent():
         self.observation_space = deepcopy(env.observation_space)
         self.observation_space['mission_id'].n = 6# override environment to have 6 goals
         self.action_space = env.action_space
-        self.actor = CraftingOracleActor(self.args, self.rng, self.observation_space, self.action_space, second_order=False)
+        self.actor = CraftingOracleActor(self.args, self.rng, self.observation_space, self.action_space, nth_order=nth_order)
 
     def get_train_actor(self):
         return self.actor
@@ -63,12 +74,6 @@ class CraftingOracleAgent():
     def load(self, checkpoint_dir):
         pass
 
-class SOCraftingOracleAgent(CraftingOracleAgent):
-    TAGS = ['second_order']
-    def __init__(self, args, rng, env):
-        super().__init__(args, rng, env)
-        self.actor = CraftingOracleActor(self.args, self.rng, self.observation_space, self.action_space, second_order=True)
-
 class BaseLearner(object):
     def observe_first(self, obs, infos):
         pass
@@ -80,7 +85,7 @@ class BaseLearner(object):
         pass
 
 class CraftingOracleActor(object):
-    def __init__(self, args, rng, observation_space, action_space, second_order=False):
+    def __init__(self, args, rng, observation_space, action_space, nth_order=1):
         self.args = args
         self.rng = rng
         self.observation_space = observation_space
@@ -90,7 +95,7 @@ class CraftingOracleActor(object):
         self.base_grid = np.zeros((self.h, self.w), np.uint8)
         self.flow = None
         self.border = None
-        self.second_order = second_order
+        self.orders = nth_order
 
     def observe_first(self, obs, infos):
         self.last_obs = obs
@@ -105,66 +110,46 @@ class CraftingOracleActor(object):
         # build flow map
         self.base_grid = new_base_grid
         self.border = self.base_grid == 2
-        self.flow = np.full((MISSIONS, MISSIONS, self.h, self.w, 4), 3 * self.h * self.w + 4, dtype=np.int_)
-        reachable_q = []
-        for mission in range(MISSIONS):
-            obj_id = MISSION_OBJ[mission]
-            x_goal, y_goal = np.where(self.base_grid == obj_id)
-            for i in range(x_goal.shape[0]):
-                for (x, y, d), _ in _goal_neighbors(x_goal[i], y_goal[i], self.border):
-                    self.flow[mission, mission, x, y, d] = 1
-                    reachable_q.append((mission, mission, x, y, d))
+        self.flow = np.full((*([MISSIONS]*self.orders), self.h, self.w, 4), 3 * self.h * self.w + 4, dtype=np.int_)
 
-        while len(reachable_q) > 0:
-            sm, m, x, y, d = reachable_q.pop(0)
-            dist = self.flow[sm, m, x, y, d]
-            for (nx, ny, nd), _ in _get_r_neighbors(x, y, d, self.border):
-                ndist = self.flow[sm, m, nx, ny, nd]
-                if dist + 1 < ndist:
-                    self.flow[sm, m, nx, ny, nd] = dist + 1
-                    reachable_q.append((sm, m, nx, ny, nd))
-
-        if self.second_order:
-            for mission in range(MISSIONS):
-                for sub_mission in range(MISSIONS):
-                    if mission == sub_mission:
-                        continue
-                    obj_id = MISSION_OBJ[sub_mission]
-                    x_goal, y_goal = np.where(self.base_grid == obj_id)
-                    for i in range(x_goal.shape[0]):
-                        for (x, y, d), _ in _goal_neighbors(x_goal[i], y_goal[i], self.border):
-                            self.flow[sub_mission, mission, x, y, d] = self.flow[mission, mission, x, y, d] + 1
-                            reachable_q.append((sub_mission, mission, x, y, d))
-
-            while len(reachable_q) > 0:
-                sm, m, x, y, d = reachable_q.pop(0)
-                dist = self.flow[sm, m, x, y, d]
-                for (nx, ny, nd), _ in _get_r_neighbors(x, y, d, self.border):
-                    ndist = self.flow[sm, m, nx, ny, nd]
-                    if dist + 1 < ndist:
-                        self.flow[sm, m, nx, ny, nd] = dist + 1
-                        reachable_q.append((sm, m, nx, ny, nd))
+        for order in range(self.orders):
+            for missions in it.permutations(range(MISSIONS), order+1):
+                reachable_q = []
+                nth_order_mission = missions + (missions[-1],) * (self.orders - order - 1)
+                prev_order_mission = missions[1:] + (missions[-1],) * (self.orders - order)
+                assert len(nth_order_mission) == self.orders
+                obj_id = MISSION_OBJ[missions[0]]
+                x_goal, y_goal = np.where(self.base_grid == obj_id)
+                cur_flow = self.flow[nth_order_mission]
+                prev_flow = self.flow[prev_order_mission]
+                for i in range(x_goal.shape[0]):
+                    for (x, y, d), _ in _goal_neighbors(x_goal[i], y_goal[i], self.border):
+                        if order == 0:
+                            cur_flow[x, y, d] = 1
+                        else:
+                            cur_flow[x, y, d] = prev_flow[x, y, d] + 1
+                        reachable_q.append((x, y, d))
+                _fill_flow(reachable_q, cur_flow, self.border)
 
     def observe(self, next_obs, action, infos):
         self.last_obs = next_obs
         self.last_infos = infos
 
-    def act(self, accum=None, mission_id=None, sub_mission_id=None, include_terminal=False):
-        if mission_id is None:
-            mission_id = self.last_obs['mission_id']
-        if sub_mission_id is None:
-            sub_mission_id = mission_id
-        else:
-            assert self.second_order
+    def act(self, accum=None, missions=None, include_terminal=False):
+        if missions is None:
+            missions = (self.last_obs['mission_id'],) * self.orders
+        assert len(missions) == self.orders
 
         pos = np.where(self.last_obs['image'] == AGENT_ID)
         x, y = pos[0][0], pos[1][0]
         d = self.last_obs['direction']
-        max_dist = self.flow[sub_mission_id, mission_id, x, y, d]
+        #max_dist = self.flow[sub_mission_id, mission_id, x, y, d]
+        cur_flow = self.flow[missions]
+        max_dist = cur_flow[x, y, d]
         a = None
         for (nx, ny, nd), na in _get_neighbors(x, y, d, self.border):
-            if self.flow[sub_mission_id, mission_id, nx, ny, nd] < max_dist:
-                max_dist = self.flow[sub_mission_id, mission_id, nx, ny, nd]
+            if cur_flow[nx, ny, nd] < max_dist:
+                max_dist = cur_flow[nx, ny, nd]
                 a = na
         if a is None:
             a = MiniGridEnv.Actions.toggle
@@ -175,29 +160,24 @@ class CraftingOracleActor(object):
 
 class HLCraftingOracleAgent(CraftingOracleAgent):
     TAGS = []
-    def __init__(self, args, env, rng):
+    def __init__(self, args, env, rng, nth_order=1):
         self.args = args
         self.rng = rng
         # assert isinstance(env, CompactCraftObsWrapper)
         self.observation_space = env.observation_space
         assert self.observation_space['mission_id'].n == 8
         self.action_space = env.action_space
-        self.actor = HLCraftingOracleActor(self.args, self.rng, self.observation_space, self.action_space, second_order=False)
-
-class SOHLCraftingOracleAgent(HLCraftingOracleAgent):
-    def __init__(self, args, rng, env):
-        super().__init__(args, rng, env)
-        self.actor = HLCraftingOracleActor(self.args, self.rng, self.observation_space, self.action_space, second_order=True)
+        self.actor = HLCraftingOracleActor(self.args, self.rng, self.observation_space, self.action_space, nth_order=nth_order)
 
 class HLCraftingOracleActor(object):
-    def __init__(self, args, rng, observation_space, action_space, second_order=False):
+    def __init__(self, args, rng, observation_space, action_space, nth_order=1):
         self.args = args
         self.rng = rng
         self.observation_space = observation_space
         self.action_space = action_space
 
-        self.second_order = second_order
-        self.ll_actor = CraftingOracleActor(args, rng, observation_space, action_space, second_order)
+        self.ll_actor = CraftingOracleActor(args, rng, observation_space, action_space, nth_order=nth_order)
+        self.orders = nth_order
 
     def observe_first(self, obs, infos):
         self.last_obs = obs
@@ -216,16 +196,15 @@ class HLCraftingOracleActor(object):
             mission_id = self.last_obs['mission_id']
 
         sketch = self.last_obs['sketch']
+        if (sketch == [1, 5, 3, 5]).all():
+            # shears plan can be shortened
+            sketch = np.array([1, 3, 5])
         self.seen_completed = self.seen_completed | self.last_obs['completion']
         completion = self.seen_completed
         sketch = [m - 1 for m in sketch if m > 0]# remove padding
         plan = [m for m in sketch if not completion[m]]
-        if len(plan) == 0:
-            plan = [sketch[-1]]# for shears edge case (workbench twice)
-        if not self.second_order or len(plan) < 2:
-            hl_action = plan[0]
-            a = self.ll_actor.act(mission_id=hl_action)
-        else:
-            hl_action = plan[0:2]
-            a = self.ll_actor.act(mission_id=hl_action[1], sub_mission_id=hl_action[0])
+
+        hl_action = tuple(plan[0:self.orders])
+        hl_action = hl_action + (hl_action[-1],) * (self.orders - len(hl_action))
+        a = self.ll_actor.act(missions=hl_action)
         return a

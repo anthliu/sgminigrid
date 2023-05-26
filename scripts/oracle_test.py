@@ -3,7 +3,7 @@
 import time
 import numpy as np
 import gymnasium as gym
-from sgminigrid.crafting_oracle import SOCraftingOracleAgent, CraftingOracleAgent, HLCraftingOracleAgent, SOHLCraftingOracleAgent
+from sgminigrid.crafting_oracle import CraftingOracleAgent, HLCraftingOracleAgent
 from sgminigrid.wrappers import CompactCraftObsWrapper
 
 def shuffle(episodes, agent, env):
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--env", help="gym environment to load", default="SGMG-Crafting-Bonus-Fixed-v0"
+        "--env", help="gym environment to load", default="SGMG-Crafting-Bonus-Fixed-v1"
     )
     parser.add_argument(
         "--episodes", default=1, type=int, help="n episodes"
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         "--render", action='store_true', help="render to screen"
     )
     parser.add_argument(
-        "--second-order", action='store_true', help="use second order"
+        "--orders", default=1, type=int, help="nth order agent"
     )
     args = parser.parse_args()
     if args.render:
@@ -59,14 +59,8 @@ if __name__ == "__main__":
         env = CompactCraftObsWrapper(gym.make(args.env))
 
     if 'Compose' in args.env:
-        if args.second_order:
-            agent = SOHLCraftingOracleAgent(None, env, np.random.default_rng(42))
-        else:
-            agent = HLCraftingOracleAgent(None, env, np.random.default_rng(42))
+        agent = HLCraftingOracleAgent(None, env, np.random.default_rng(42), nth_order=args.orders)
     else:
-        if args.second_order:
-            agent = SOCraftingOracleAgent(None, env, np.random.default_rng(42))
-        else:
-            agent = CraftingOracleAgent(None, env, np.random.default_rng(42))
+        agent = CraftingOracleAgent(None, env, np.random.default_rng(42), nth_order=args.orders)
 
     shuffle(args.episodes, agent, env)
