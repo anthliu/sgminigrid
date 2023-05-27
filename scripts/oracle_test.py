@@ -6,7 +6,7 @@ import gymnasium as gym
 from sgminigrid.crafting_oracle import CraftingOracleAgent, HLCraftingOracleAgent
 from sgminigrid.wrappers import CompactCraftObsWrapper
 
-def shuffle(episodes, agent, env):
+def shuffle(episodes, agent, env, init_noise=0):
     actor = agent.get_test_actor()
     rs = []
     Ts = []
@@ -20,7 +20,10 @@ def shuffle(episodes, agent, env):
             # time.sleep(1/10.)
             # action = env.action_space.sample()
             # a = actor.act(sub_mission_id=obs['mission_id'], mission_id=5)
-            a = actor.act()
+            if T <= init_noise:
+                a = env.action_space.sample()
+            else:
+                a = actor.act()
             obs, reward, done, truncated, infos = env.step(a)
             r += reward
             terminal = done or truncated
@@ -52,6 +55,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--orders", default=1, type=int, help="nth order agent"
     )
+    parser.add_argument(
+        "--init-noise", default=0, type=int, help="randomly execute actions for first n timesteps"
+    )
     args = parser.parse_args()
     if args.render:
         env = CompactCraftObsWrapper(gym.make(args.env, render_mode='human'))
@@ -63,4 +69,4 @@ if __name__ == "__main__":
     else:
         agent = CraftingOracleAgent(None, env, np.random.default_rng(42), nth_order=args.orders)
 
-    shuffle(args.episodes, agent, env)
+    shuffle(args.episodes, agent, env, init_noise=args.init_noise)
